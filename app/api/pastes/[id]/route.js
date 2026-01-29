@@ -1,32 +1,45 @@
-import connectDB from "@/lib/db";
-import Paste from "@/models/Paste";
-import { now } from "@/lib/time";
+import pool from "@/lib/db";
 
 export async function GET(req, { params }) {
-  await connectDB();
-  const paste = await Paste.findById(params.id);
+  const { id } = params;
 
-  if (!paste) {
-    return Response.json({ error: "Not found" }, { status: 404 });
+  const client = await pool.connect();
+
+  try {
+    const result = await client.query(
+      `SELECT id, content, views, max_views, expires_at
+       FROM pastes
+       WHERE id = $1`,
+      [id]
+    );
+
+    if (result.rows.length === 0) {
+      return Response.json({ error: "Not found" }, { status: 404 });
+    }
+
+    const paste = result.rows[0];
+    const now = Date.now();
+
+    if (paste.expires_at && now > new Date(paste.expires_at).getTime()) {
+      return Response.json({ error: "Expired" }, { status: 404 });
+    }
+
+    if (paste.max_views !== null && paste.views >= paste.max_views) {
+      return Response.json({ error: "View limit exceeded" }, { status: 404 });
+    }
+
+    await client.query(
+      `UPDATE pastes SET views = views + 1 WHERE id = $1`,
+      [id]
+    );
+
+    return Response.json({
+      content: paste.content,
+      remaining_views:
+        paste.max_views === null ? null : paste.max_views - paste.views - 1,
+      expires_at: paste.expires_at,
+    });
+  } finally {
+    client.release();
   }
-
-  const currentTime = now(req);
-
-  if (paste.expiresAt && currentTime > paste.expiresAt.getTime()) {
-    return Response.json({ error: "Expired" }, { status: 404 });
-  }
-
-  if (paste.maxViews !== null && paste.views >= paste.maxViews) {
-    return Response.json({ error: "View limit exceeded" }, { status: 404 });
-  }
-
-  paste.views += 1;
-  await paste.save();
-
-  return Response.json({
-    content: paste.content,
-    remaining_views:
-      paste.maxViews === null ? null : paste.maxViews - paste.views,
-    expires_at: paste.expiresAt,
-  });
 }
