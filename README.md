@@ -1,16 +1,25 @@
-## Pastebin Lite
+# Pastebin Lite
 
-A simple Pastebin-like app built with Next.js and MongoDB.
+A simple Pastebin-like web application built as a take-home assignment.
 
-### Run locally
-npm install
-npm run dev
+## Features
+- Create text pastes
+- Generate shareable URLs
+- View pastes using the link
+- Backend health check endpoint
 
-### Persistence
-MongoDB is used for storing pastes.
+## Tech Stack
+- Next.js (App Router)
+- Node.js
+- PostgreSQL (Neon)
+- Deployed on Vercel
 
-### Features
-- Create paste
-- Shareable link
-- TTL expiry
-- View limit
+## Local Setup
+1. Install dependencies
+   npm install
+2. Create .env.local
+3. Run the app
+   npm run dev
+
+## Health Check
+GET /api/healthz
